@@ -41,18 +41,20 @@ class FileStore:
         
         # Try to load existing private key or generate a new one
         key_file = os.path.join(PRIVATE_DIR, 'master_key.wif')
-        if os.path.exists(key_file):
-            with open(key_file, 'r') as f:
-                wif = f.read().strip()
-                self.master_private_key = PrivateKey(wif)
-                print("Loaded existing private key")
-        else:
+        is_new_key = not os.path.exists(key_file)
+        
+        if is_new_key:
             # Generate master key pair
             self.master_private_key = PrivateKey(secrets.token_bytes(32))
             # Save private key in WIF format
             with open(key_file, 'w') as f:
                 f.write(self.master_private_key.wif(network=Network.TESTNET if network == "test" else Network.MAINNET))
             print("Generated and saved new private key")
+        else:
+            with open(key_file, 'r') as f:
+                wif = f.read().strip()
+                self.master_private_key = PrivateKey(wif)
+                print("Loaded existing private key")
         
         self.p2pkh = P2PKH()
         
@@ -63,12 +65,59 @@ class FileStore:
         self.index_file = os.path.join(TEST_DATA_DIR, 'file_index.json')
         self.file_index = self._load_file_index()
         
-        print(f"Master public key: {self.master_public_key.hex()}")
-        # Print the address for receiving test coins
-        print(f"\nFunding address (send test coins here): {self.master_private_key.public_key().address(network=Network.TESTNET if network == 'test' else Network.MAINNET)}\n")
+        # Get the address
+        self.address = self.master_private_key.public_key().address(
+            network=Network.TESTNET if network == "test" else Network.MAINNET
+        )
+        print(f"\nMaster public key: {self.master_public_key.hex()}")
+        print(f"Address: {self.address}")
+
+        # If this is a new key and we're on testnet, wait for test coins
+        if is_new_key and network == 'test':
+            self._wait_for_test_coins()
         
         # Initialize secure channel
         self.secure_channel = SecureChannel(self.master_private_key)
+
+    def _wait_for_test_coins(self):
+        """Wait for test coins to be received"""
+        print("\n=== Getting Test Coins ===")
+        print("Please get test coins from the scrypt.io faucet:")
+        print("https://scrypt.io/faucet")
+        print(f"\nYour address: {self.address}")
+        print("\nYou can check your balance at:")
+        print(f"https://test.whatsonchain.com/address/{self.address}")
+        print(f"https://testnet.bitcoincloud.net/address/{self.address}")
+        
+        print("\nMinimum required balance: 0.001 BSV")
+        print("This is needed for transaction fees and file storage")
+        
+        print("\nWaiting for coins to arrive...")
+        print("Press Ctrl+C to skip waiting")
+        
+        try:
+            while True:
+                # Check for UTXOs
+                address_info = self._get_address_info(self.address)
+                if address_info.get('utxos'):
+                    total_value = sum(utxo['value'] for utxo in address_info['utxos'])
+                    total_bsv = total_value/100000000
+                    print(f"\nReceived {total_bsv:.8f} BSV!")
+                    
+                    if total_bsv >= 0.001:
+                        print("Balance is sufficient. You can now start using the program.")
+                    else:
+                        print(f"Warning: Current balance ({total_bsv:.8f} BSV) is below the recommended minimum (0.001 BSV)")
+                        print("You may need more coins for storing larger files")
+                    break
+                
+                # Show a simple progress indicator
+                print(".", end="", flush=True)
+                time.sleep(5)  # Check every 5 seconds
+                
+        except KeyboardInterrupt:
+            print("\n\nSkipped waiting for coins.")
+            print("You'll need to get test coins before you can store or share files.")
 
     def _load_file_index(self) -> Dict:
         """Load file index from disk or create new one"""
@@ -328,13 +377,21 @@ class FileStore:
             # Get UTXOs (both confirmed and unconfirmed)
             unspent_url = f"{self.api_url}/address/{address}/unspent"
             unspent_response = requests.get(unspent_url)
-            print(f"UTXOs response: {unspent_response.text}")
             utxos = unspent_response.json() if unspent_response.text.strip() else []
-            print(f"All UTXOs: {utxos}")
-            return {"utxos": utxos}
+            
+            # Get balance
+            balance_url = f"{self.api_url}/address/{address}/balance"
+            balance_response = requests.get(balance_url)
+            balance = balance_response.json() if balance_response.status_code == 200 else {}
+            
+            return {
+                "utxos": utxos,
+                "balance": balance.get("confirmed", 0),
+                "unconfirmed": balance.get("unconfirmed", 0)
+            }
         except Exception as e:
-            print(f"Error getting address info: {str(e)}")
-            return {"utxos": []}
+            print(f"\nError getting address info: {str(e)}")
+            return {"utxos": [], "balance": 0, "unconfirmed": 0}
 
     def get_explorer_urls(self, tx_id: str) -> dict:
         """Get block explorer URLs for a transaction"""
