@@ -64,6 +64,8 @@ class FileStore:
         self.file_index = self._load_file_index()
         
         print(f"Master public key: {self.master_public_key.hex()}")
+        # Print the address for receiving test coins
+        print(f"\nFunding address (send test coins here): {self.master_private_key.public_key().address(network=Network.TESTNET if network == 'test' else Network.MAINNET)}\n")
         
         # Initialize secure channel
         self.secure_channel = SecureChannel(self.master_private_key)
