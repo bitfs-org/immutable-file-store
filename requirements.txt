@@ -1,4 +1,3 @@
-bsv-sdk>=1.0.0
-pandas>=2.2.0
-cryptography==42.0.2
-requests==2.31.0 
+bsv-sdk
+cryptography>=40.0.0
+requests>=2.31.0 
