@@ -39,4 +39,7 @@ test_data/
 *.wif
 
 # Logs
-*.log 
+*.log
+
+# Documentation
+An immutable file and data store.md 
