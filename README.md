@@ -1,6 +1,6 @@
 # Immutable File Store
 
-An immutable file storage system built on the Bitcoin SV blockchain, featuring secure file sharing and deterministic key generation.
+This project is a proof of concept implementation of the immutable file storage system described in the article [An immutable file and data store](https://medium.com/swlh/an-immutable-file-and-data-store-36f67fc044d7) by Craig Wright. The implementation demonstrates the core concepts of storing and sharing files on the Bitcoin SV blockchain using deterministic key generation and secure channels.
 
 [中文版本](#immutable-file-store-中文版)
 
@@ -96,7 +96,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 # Immutable File Store (中文版)
 
-基于比特币 SV 区块链构建的不可变文件存储系统，具有安全文件共享和确定性密钥生成功能。
+本项目是对 Craig Wright 发表的文章 [An immutable file and data store](https://medium.com/swlh/an-immutable-file-and-data-store-36f67fc044d7) 中描述的不可变文件存储系统的概念验证实现。该实现演示了使用确定性密钥生成和安全通道在比特币 SV 区块链上存储和共享文件的核心概念。
 
 ## 特性
 
